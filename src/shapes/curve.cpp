@@ -620,7 +620,7 @@ QuadraticCurveCommon::QuadraticCurveCommon(const Point3f c[4], Float width0, Flo
     ++nCurves;
 }
 
-std::vector<std::shared_ptr<Shape>> CreateCurve(
+std::vector<std::shared_ptr<Shape>> CreateQuadraticCurve(
     const Transform* o2w, const Transform* w2o, bool reverseOrientation,
     const Point3f* c, Float w0, Float w1, CurveType type,
     const Normal3f* norm, int splitDepth) {
@@ -640,7 +640,7 @@ std::vector<std::shared_ptr<Shape>> CreateCurve(
     return segments;
 }
 
-Bounds3f Curve::ObjectBound() const {
+Bounds3f QuadraticCurve::ObjectBound() const {
     // Compute object-space control points for curve segment, _cpObj_
     Point3f cpObj[4];
     cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
@@ -654,8 +654,8 @@ Bounds3f Curve::ObjectBound() const {
     return Expand(b, std::max(width[0], width[1]) * 0.5f);
 }
 
-bool Curve::Intersect(const Ray& r, Float* tHit, SurfaceInteraction* isect,
-                      bool testAlphaTexture) const {
+bool QuadraticCurve::Intersect(const Ray& r, Float* tHit, SurfaceInteraction* isect,
+                               bool testAlphaTexture) const {
     ProfilePhase p(isect ? Prof::CurveIntersect : Prof::CurveIntersectP);
     ++nTests;
     // Transform _Ray_ to object space
@@ -753,10 +753,10 @@ bool Curve::Intersect(const Ray& r, Float* tHit, SurfaceInteraction* isect,
                               uMax, maxDepth);
 }
 
-bool Curve::recursiveIntersect(const Ray& ray, Float* tHit,
-                               SurfaceInteraction* isect, const Point3f cp[4],
-                               const Transform& rayToObject, Float u0, Float u1,
-                               int depth) const {
+bool QuadraticCurve::recursiveIntersect(const Ray& ray, Float* tHit,
+                                        SurfaceInteraction* isect, const Point3f cp[4],
+                                        const Transform& rayToObject, Float u0, Float u1,
+                                        int depth) const {
     Float rayLength = ray.d.Length();
 
     if(depth > 0) {
@@ -900,7 +900,7 @@ bool Curve::recursiveIntersect(const Ray& ray, Float* tHit,
     }
 }
 
-Float Curve::Area() const {
+Float QuadraticCurve::Area() const {
     // Compute object-space control points for curve segment, _cpObj_
     Point3f cpObj[4];
     cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
@@ -917,15 +917,15 @@ Float Curve::Area() const {
     return approxLength * avgWidth;
 }
 
-Interaction Curve::Sample(const Point2f& u, Float* pdf) const {
+Interaction QuadraticCurve::Sample(const Point2f& u, Float* pdf) const {
     LOG(FATAL) << "Curve::Sample not implemented.";
     return Interaction();
 }
 
-std::vector<std::shared_ptr<Shape>> CreateCurveShape(const Transform* o2w,
-                                                     const Transform* w2o,
-                                                     bool             reverseOrientation,
-                                                     const ParamSet&  params) {
+std::vector<std::shared_ptr<Shape>> CreateQuadraticCurveShape(const Transform* o2w,
+                                                              const Transform* w2o,
+                                                              bool             reverseOrientation,
+                                                              const ParamSet&  params) {
     Float width  = params.FindOneFloat("width", 1.f);
     Float width0 = params.FindOneFloat("width0", width);
     Float width1 = params.FindOneFloat("width1", width);
@@ -1074,10 +1074,10 @@ std::vector<std::shared_ptr<Shape>> CreateCurveShape(const Transform* o2w,
             ++cpBase;
         }
 
-        auto c = CreateCurve(o2w, w2o, reverseOrientation, segCpBezier,
-                             Lerp(Float(seg) / Float(nSegments),     width0, width1),
-                             Lerp(Float(seg + 1) / Float(nSegments), width0, width1),
-                             type, n ? &n[seg] : nullptr, sd);
+        auto c = CreateQuadraticCurve(o2w, w2o, reverseOrientation, segCpBezier,
+                                      Lerp(Float(seg) / Float(nSegments),     width0, width1),
+                                      Lerp(Float(seg + 1) / Float(nSegments), width0, width1),
+                                      type, n ? &n[seg] : nullptr, sd);
         curves.insert(curves.end(), c.begin(), c.end());
     }
     return curves;

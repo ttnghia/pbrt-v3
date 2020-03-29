@@ -109,7 +109,7 @@ class QuadraticCurve : public Shape {
 public:
     // Curve Public Methods
     QuadraticCurve(const Transform* ObjectToWorld, const Transform* WorldToObject,
-                   bool reverseOrientation, const std::shared_ptr<CurveCommon>& common,
+                   bool reverseOrientation, const std::shared_ptr<QuadraticCurveCommon>& common,
                    Float uMin, Float uMax)
         : Shape(ObjectToWorld, WorldToObject, reverseOrientation),
         common(common),
