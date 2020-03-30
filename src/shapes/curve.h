@@ -132,11 +132,6 @@ private:
     const std::shared_ptr<QuadraticCurveCommon> common;
     const Float uMin, uMax;
 };
-
-std::vector<std::shared_ptr<Shape>> CreateQuadraticCurveShape(const Transform* o2w,
-                                                              const Transform* w2o,
-                                                              bool             reverseOrientation,
-                                                              const ParamSet&  params);
 } // namespace pbrt
 
 #endif // PBRT_SHAPES_CURVE_H
