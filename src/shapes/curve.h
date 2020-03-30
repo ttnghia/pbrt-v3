@@ -95,10 +95,10 @@ std::vector<std::shared_ptr<Shape>> CreateCurveShape(const Transform* o2w,
 /****************************************************************************************************/
 // CurveCommon Declarations
 struct QuadraticCurveCommon {
-    QuadraticCurveCommon(const Point3f c[4], Float w0, Float w1, CurveType type,
+    QuadraticCurveCommon(const Point3f c[3], Float w0, Float w1, CurveType type,
                          const Normal3f* norm);
     const CurveType type;
-    Point3f         cpObj[4];
+    Point3f         cpObj[3];
     Float           width[2];
     Normal3f        n[2];
     Float           normalAngle, invSinNormalAngle;
@@ -124,7 +124,7 @@ public:
 private:
     // Curve Private Methods
     bool recursiveIntersect(const Ray& r, Float* tHit,
-                            SurfaceInteraction* isect, const Point3f cp[4],
+                            SurfaceInteraction* isect, const Point3f cp[3],
                             const Transform& rayToObject, Float u0, Float u1,
                             int depth) const;
 
