@@ -564,42 +564,36 @@ std::vector<std::shared_ptr<Shape>> CreateCurveShape(const Transform* o2w,
 }
 
 /****************************************************************************************************/
-static Point3f BlossomQuadraticBezier(const Point3f p[4], Float u0, Float u1, Float u2) {
-    Point3f a[3] = { Lerp(u0, p[0], p[1]), Lerp(u0, p[1], p[2]),
-                     Lerp(u0, p[2], p[3]) };
-    Point3f b[2] = { Lerp(u1, a[0], a[1]), Lerp(u1, a[1], a[2]) };
-    return Lerp(u2, b[0], b[1]);
+static Point3f BlossomQuadraticBezier(const Point3f p[3], Float u0, Float u1) {
+    Point3f a[2] = { Lerp(u0, p[0], p[1]), Lerp(u0, p[1], p[2]) };
+    return Lerp(u1, a[0], a[1]);
 }
 
-inline void SubdivideQuadraticBezier(const Point3f cp[4], Point3f cpSplit[7]) {
+inline void SubdivideQuadraticBezier(const Point3f cp[3], Point3f cpSplit[5]) {
     cpSplit[0] = cp[0];
     cpSplit[1] = (cp[0] + cp[1]) / 2;
     cpSplit[2] = (cp[0] + 2 * cp[1] + cp[2]) / 4;
-    cpSplit[3] = (cp[0] + 3 * cp[1] + 3 * cp[2] + cp[3]) / 8;
-    cpSplit[4] = (cp[1] + 2 * cp[2] + cp[3]) / 4;
-    cpSplit[5] = (cp[2] + cp[3]) / 2;
-    cpSplit[6] = cp[3];
+    cpSplit[3] = (cp[1] + cp[2]) / 2;
+    cpSplit[4] = cp[2];
 }
 
-static Point3f EvalQuadraticBezier(const Point3f cp[4], Float u,
+static Point3f EvalQuadraticBezier(const Point3f cp[3], Float u,
                                    Vector3f* deriv = nullptr) {
-    Point3f cp1[3] = { Lerp(u, cp[0], cp[1]), Lerp(u, cp[1], cp[2]),
-                       Lerp(u, cp[2], cp[3]) };
-    Point3f cp2[2] = { Lerp(u, cp1[0], cp1[1]), Lerp(u, cp1[1], cp1[2]) };
+    Point3f cp1[2] = { Lerp(u, cp[0], cp[1]), Lerp(u, cp[1], cp[2]) };
     if(deriv) {
-        if((cp2[1] - cp2[0]).LengthSquared() > 0) {
-            *deriv = 3 * (cp2[1] - cp2[0]);
+        if((cp1[1] - cp1[0]).LengthSquared() > 0) {
+            *deriv = 2 * (cp1[1] - cp1[0]);
         } else {
-            // For a cubic Bezier, if the first three control points (say) are
+            // For a cubic Bezier, if the first 2 control points (say) are
             // coincident, then the derivative of the curve is legitimately (0,0,0)
             // at u=0.  This is problematic for us, though, since we'd like to be
             // able to compute a surface normal there.  In that case, just punt and
             // take the difference between the first and last control points, which
             // ain't great, but will hopefully do.
-            *deriv = cp[3] - cp[0];
+            *deriv = cp[2] - cp[0];
         }
     }
-    return Lerp(u, cp2[0], cp2[1]);
+    return Lerp(u, cp1[0], cp1[1]);
 }
 
 // Curve Method Definitions
