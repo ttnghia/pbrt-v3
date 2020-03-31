@@ -65,10 +65,8 @@ inline void SubdivideBezier(const Point3f cp[4], Point3f cpSplit[7]) {
     cpSplit[6] = cp[3];
 }
 
-static Point3f EvalBezier(const Point3f cp[4], Float u,
-                          Vector3f* deriv = nullptr) {
-    Point3f cp1[3] = { Lerp(u, cp[0], cp[1]), Lerp(u, cp[1], cp[2]),
-                       Lerp(u, cp[2], cp[3]) };
+static Point3f EvalBezier(const Point3f cp[4], Float u, Vector3f* deriv = nullptr) {
+    Point3f cp1[3] = { Lerp(u, cp[0], cp[1]), Lerp(u, cp[1], cp[2]), Lerp(u, cp[2], cp[3]) };
     Point3f cp2[2] = { Lerp(u, cp1[0], cp1[1]), Lerp(u, cp1[1], cp1[2]) };
     if(deriv) {
         if((cp2[1] - cp2[0]).LengthSquared() > 0) {
@@ -87,8 +85,7 @@ static Point3f EvalBezier(const Point3f cp[4], Float u,
 }
 
 // Curve Method Definitions
-CurveCommon::CurveCommon(const Point3f c[4], Float width0, Float width1,
-                         CurveType type, const Normal3f* norm)
+CurveCommon::CurveCommon(const Point3f c[4], Float width0, Float width1, CurveType type, const Normal3f* norm)
     : type(type) {
     width[0] = width0;
     width[1] = width1;
@@ -134,7 +131,7 @@ std::vector<std::shared_ptr<Shape>> CreateCurve(
     }
     curveBytes += sizeof(QuadraticCurveCommon) + nSegments * sizeof(QuadraticCurve);
 
-#  else // QUADRATIC_CURVE_CONVERSION
+#  else // QUADRATIC_CURVE_SPLIT
     Point3f qc1[3] = { c[0], c[0] + 1.5f * 0.5f * (c[1] - c[0]), c[0] };
     Point3f qc2[3] = { c[0], c[3] - 1.5f * 0.5f * (c[3] - c[2]), c[3] };
     qc1[2] = 0.5f * (qc1[1] + qc2[1]);
@@ -617,8 +614,7 @@ inline void SubdivideQuadraticBezier(const Point3f cp[3], Point3f cpSplit[5]) {
     cpSplit[4] = cp[2];
 }
 
-static Point3f EvalQuadraticBezier(const Point3f cp[3], Float u,
-                                   Vector3f* deriv = nullptr) {
+static Point3f EvalQuadraticBezier(const Point3f cp[3], Float u, Vector3f* deriv = nullptr) {
     Point3f cp1[2] = { Lerp(u, cp[0], cp[1]), Lerp(u, cp[1], cp[2]) };
     if(deriv) {
         if((cp1[1] - cp1[0]).LengthSquared() > 0) {
@@ -637,8 +633,7 @@ static Point3f EvalQuadraticBezier(const Point3f cp[3], Float u,
 }
 
 // Curve Method Definitions
-QuadraticCurveCommon::QuadraticCurveCommon(const Point3f c[3], Float width0, Float width1,
-                                           CurveType type, const Normal3f* norm)
+QuadraticCurveCommon::QuadraticCurveCommon(const Point3f c[3], Float width0, Float width1, CurveType type, const Normal3f* norm)
     : type(type) {
     width[0] = width0;
     width[1] = width1;
@@ -652,25 +647,6 @@ QuadraticCurveCommon::QuadraticCurveCommon(const Point3f c[3], Float width0, Flo
         invSinNormalAngle = 1 / std::sin(normalAngle);
     }
     ++nCurves;
-}
-
-std::vector<std::shared_ptr<Shape>> CreateQuadraticCurve(
-    const Transform* o2w, const Transform* w2o, bool reverseOrientation,
-    const Point3f* c, Float w0, Float w1, CurveType type,
-    const Normal3f* norm, int splitDepth) {
-    std::vector<std::shared_ptr<Shape>>   segments;
-    std::shared_ptr<QuadraticCurveCommon> common    = std::make_shared<QuadraticCurveCommon>(c, w0, w1, type, norm);
-    const int                             nSegments = 1 << splitDepth;
-    segments.reserve(nSegments);
-    for(int i = 0; i < nSegments; ++i) {
-        Float uMin = i / (Float)nSegments;
-        Float uMax = (i + 1) / (Float)nSegments;
-        segments.push_back(std::make_shared<QuadraticCurve>(o2w, w2o, reverseOrientation,
-                                                            common, uMin, uMax));
-        ++nSplitCurves;
-    }
-    curveBytes += sizeof(CurveCommon) + nSegments * sizeof(QuadraticCurve);
-    return segments;
 }
 
 Bounds3f QuadraticCurve::ObjectBound() const {
