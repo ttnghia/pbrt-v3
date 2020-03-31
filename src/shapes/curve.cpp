@@ -164,10 +164,9 @@ Bounds3f Curve::ObjectBound() const {
     cpObj[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
     cpObj[2] = BlossomBezier(common->cpObj, uMin, uMax, uMax);
     cpObj[3] = BlossomBezier(common->cpObj, uMax, uMax, uMax);
-    Bounds3f b =
-        Union(Bounds3f(cpObj[0], cpObj[1]), Bounds3f(cpObj[2], cpObj[3]));
-    Float width[2] = { Lerp(uMin, common->width[0], common->width[1]),
-                       Lerp(uMax, common->width[0], common->width[1]) };
+    Bounds3f b        = Union(Bounds3f(cpObj[0], cpObj[1]), Bounds3f(cpObj[2], cpObj[3]));
+    Float    width[2] = { Lerp(uMin, common->width[0], common->width[1]),
+                          Lerp(uMax, common->width[0], common->width[1]) };
     return Expand(b, std::max(width[0], width[1]) * 0.5f);
 }
 
@@ -655,7 +654,7 @@ Bounds3f QuadraticCurve::ObjectBound() const {
     cpObj[0] = BlossomQuadraticBezier(common->cpObj, uMin, uMin);
     cpObj[1] = BlossomQuadraticBezier(common->cpObj, uMin, uMax);
     cpObj[2] = BlossomQuadraticBezier(common->cpObj, uMax, uMax);
-    Bounds3f b        = Union(Bounds3f(cpObj[0], cpObj[1]), Bounds3f(cpObj[2], cpObj[3]));
+    Bounds3f b        = Union(Bounds3f(cpObj[0], cpObj[1]), Bounds3f(cpObj[2]));
     Float    width[2] = { Lerp(uMin, common->width[0], common->width[1]),
                           Lerp(uMax, common->width[0], common->width[1]) };
     return Expand(b, std::max(width[0], width[1]) * 0.5f);
