@@ -44,7 +44,7 @@ STAT_COUNTER("Scene/Split curves", nSplitCurves);
 /****************************************************************************************************/
 
 //#define QUADRATIC_CURVE_CONVERSION
-#define QUADRATIC_CURVE_SPLIT
+//#define QUADRATIC_CURVE_SPLIT
 
 /****************************************************************************************************/
 // Curve Utility Functions
@@ -264,8 +264,7 @@ bool Curve::Intersect(const Ray& r, Float* tHit, SurfaceInteraction* isect, bool
     int maxDepth = Clamp(r0, 0, 10);
     ReportValue(refinementLevel, maxDepth);
 
-    return recursiveIntersect(ray, tHit, isect, cp, Inverse(objectToRay), uMin,
-                              uMax, maxDepth);
+    return recursiveIntersect(ray, tHit, isect, cp, Inverse(objectToRay), uMin, uMax, maxDepth);
 }
 
 bool Curve::recursiveIntersect(const Ray& ray, Float* tHit,
@@ -334,8 +333,7 @@ bool Curve::recursiveIntersect(const Ray& ray, Float* tHit,
         // Test ray against segment endpoint boundaries
 
         // Test sample point against tangent perpendicular at curve start
-        Float edge =
-            (cp[1].y - cp[0].y) * -cp[0].y + cp[0].x * (cp[0].x - cp[1].x);
+        Float edge = (cp[1].y - cp[0].y) * -cp[0].y + cp[0].x * (cp[0].x - cp[1].x);
         if(edge < 0) { return false; }
 
         // Test sample point against tangent perpendicular at curve end
@@ -373,8 +371,7 @@ bool Curve::recursiveIntersect(const Ray& ray, Float* tHit,
         // Compute $v$ coordinate of curve intersection point
         Float ptCurveDist = std::sqrt(ptCurveDist2);
         Float edgeFunc    = dpcdw.x * -pc.y + pc.x * dpcdw.y;
-        Float v           = (edgeFunc > 0) ? 0.5f + ptCurveDist / hitWidth
-                                 : 0.5f - ptCurveDist / hitWidth;
+        Float v           = (edgeFunc > 0) ? 0.5f + ptCurveDist / hitWidth : 0.5f - ptCurveDist / hitWidth;
 
         // Compute hit _t_ and partial derivatives for curve intersection
         if(tHit != nullptr) {
@@ -395,9 +392,8 @@ bool Curve::recursiveIntersect(const Ray& ray, Float* tHit,
             } else {
                 // Compute curve $\dpdv$ for flat and cylinder curves
                 Vector3f dpduPlane = (Inverse(rayToObject))(dpdu);
-                Vector3f dpdvPlane =
-                    Normalize(Vector3f(-dpduPlane.y, dpduPlane.x, 0)) *
-                    hitWidth;
+                Vector3f dpdvPlane = Normalize(Vector3f(-dpduPlane.y, dpduPlane.x, 0)) * hitWidth;
+
                 if(common->type == CurveType::Cylinder) {
                     // Rotate _dpdvPlane_ to give cylindrical appearance
                     Float     theta = Lerp(v, -90., 90.);
@@ -850,15 +846,15 @@ bool QuadraticCurve::recursiveIntersect(const Ray& ray, Float* tHit,
             EvalQuadraticBezier(common->cpObj, u, &dpdu);
             CHECK_NE(Vector3f(0, 0, 0), dpdu) << "u = " << u << ", cp = " <<
                 common->cpObj[0] << ", " << common->cpObj[1] << ", " <<
-                common->cpObj[2] << ", " << common->cpObj[3];
+                common->cpObj[2];
 
             if(common->type == CurveType::Ribbon) {
                 dpdv = Normalize(Cross(nHit, dpdu)) * hitWidth;
             } else {
                 // Compute curve $\dpdv$ for flat and cylinder curves
                 Vector3f dpduPlane = (Inverse(rayToObject))(dpdu);
-                Vector3f dpdvPlane =
-                    Normalize(Vector3f(-dpduPlane.y, dpduPlane.x, 0)) * hitWidth;
+                Vector3f dpdvPlane = Normalize(Vector3f(-dpduPlane.y, dpduPlane.x, 0)) * hitWidth;
+
                 if(common->type == CurveType::Cylinder) {
                     // Rotate _dpdvPlane_ to give cylindrical appearance
                     Float     theta = Lerp(v, -90., 90.);
