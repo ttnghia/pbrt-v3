@@ -44,7 +44,7 @@ STAT_COUNTER("Scene/Split curves", nSplitCurves);
 /****************************************************************************************************/
 
 //#define QUADRATIC_CURVE_CONVERSION
-//#define QUADRATIC_CURVE_SPLIT
+#define QUADRATIC_CURVE_SPLIT
 
 /****************************************************************************************************/
 // Curve Utility Functions
@@ -137,14 +137,18 @@ std::vector<std::shared_ptr<Shape>> CreateCurve(
     qc1[2] = 0.5f * (qc1[1] + qc2[1]);
     qc2[0] = qc1[2];
 
-    std::shared_ptr<QuadraticCurveCommon> common1 = std::make_shared<QuadraticCurveCommon>(qc1, w0, w1, type, norm);
+    std::shared_ptr<QuadraticCurveCommon> common1 = std::make_shared<QuadraticCurveCommon>(qc1,
+                                                                                           w0, (w0 + w1) * 0.5f,
+                                                                                           type, norm);
     for(int i = 0; i < nSegments; ++i) {
         Float uMin = i / (Float)nSegments;
         Float uMax = (i + 1) / (Float)nSegments;
         segments.push_back(std::make_shared<QuadraticCurve>(o2w, w2o, reverseOrientation, common1, uMin, uMax));
         ++nSplitCurves;
     }
-    std::shared_ptr<QuadraticCurveCommon> common2 = std::make_shared<QuadraticCurveCommon>(qc2, w0, w1, type, norm);
+    std::shared_ptr<QuadraticCurveCommon> common2 = std::make_shared<QuadraticCurveCommon>(qc2,
+                                                                                           (w0 + w1) * 0.5f, w1,
+                                                                                           type, norm);
     for(int i = 0; i < nSegments; ++i) {
         Float uMin = i / (Float)nSegments;
         Float uMax = (i + 1) / (Float)nSegments;
