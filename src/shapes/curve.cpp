@@ -44,7 +44,7 @@ STAT_COUNTER("Scene/Split curves", nSplitCurves);
 /****************************************************************************************************/
 
 //#define QUADRATIC_CURVE_CONVERSION
-#define QUADRATIC_CURVE_SPLIT
+//#define QUADRATIC_CURVE_SPLIT
 
 /****************************************************************************************************/
 // Curve Utility Functions
@@ -515,7 +515,7 @@ std::vector<std::shared_ptr<Shape>> CreateCurveShape(const Transform* o2w,
     }
 
     int sd = params.FindOneInt("splitdepth",
-                               int(params.FindOneFloat("splitdepth", 3)));
+                               int(params.FindOneFloat("splitdepth", 1)));
 
     std::vector<std::shared_ptr<Shape>> curves;
     // Pointer to the first control point for the current segment. This is
