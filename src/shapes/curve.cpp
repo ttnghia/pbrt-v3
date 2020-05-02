@@ -43,8 +43,9 @@ STAT_COUNTER("Scene/Curves",       nCurves);
 STAT_COUNTER("Scene/Split curves", nSplitCurves);
 /****************************************************************************************************/
 
-//#define QUADRATIC_CURVE_CONVERSION
-//#define QUADRATIC_CURVE_SPLIT
+#define QUADRATIC_CURVE_SPLIT
+
+#define SUBDIV_LEVEL 1
 
 /****************************************************************************************************/
 // Curve Utility Functions
@@ -109,7 +110,7 @@ std::vector<std::shared_ptr<Shape>> CreateCurve(
     std::vector<std::shared_ptr<Shape>> segments;
     segments.reserve(nSegments);
 
-#if !defined(QUADRATIC_CURVE_CONVERSION) && !defined(QUADRATIC_CURVE_SPLIT)
+#if !defined(QUADRATIC_CURVE_SPLIT)
     std::shared_ptr<CurveCommon> common = std::make_shared<CurveCommon>(c, w0, w1, type, norm);
     for(int i = 0; i < nSegments; ++i) {
         Float uMin = i / (Float)nSegments;
@@ -119,19 +120,7 @@ std::vector<std::shared_ptr<Shape>> CreateCurve(
     }
     curveBytes += sizeof(CurveCommon) + nSegments * sizeof(Curve);
 #else
-#  ifdef QUADRATIC_CURVE_CONVERSION
-    Point3f qc[3] = { c[0], (c[1] + c[2]) * 0.5f, c[3] };
 
-    std::shared_ptr<QuadraticCurveCommon> common = std::make_shared<QuadraticCurveCommon>(qc, w0, w1, type, norm);
-    for(int i = 0; i < nSegments; ++i) {
-        Float uMin = i / (Float)nSegments;
-        Float uMax = (i + 1) / (Float)nSegments;
-        segments.push_back(std::make_shared<QuadraticCurve>(o2w, w2o, reverseOrientation, common, uMin, uMax));
-        ++nSplitCurves;
-    }
-    curveBytes += sizeof(QuadraticCurveCommon) + nSegments * sizeof(QuadraticCurve);
-
-#  else // QUADRATIC_CURVE_SPLIT
     Point3f qc1[3] = { c[0], c[0] + 1.5f * 0.5f * (c[1] - c[0]), c[0] };
     Point3f qc2[3] = { c[0], c[3] - 1.5f * 0.5f * (c[3] - c[2]), c[3] };
     qc1[2] = 0.5f * (qc1[1] + qc2[1]);
@@ -156,7 +145,6 @@ std::vector<std::shared_ptr<Shape>> CreateCurve(
         ++nSplitCurves;
     }
     curveBytes += sizeof(QuadraticCurveCommon) + 2 * nSegments * sizeof(QuadraticCurve);
-#  endif
 #endif
     return segments;
 }
@@ -515,7 +503,7 @@ std::vector<std::shared_ptr<Shape>> CreateCurveShape(const Transform* o2w,
     }
 
     int sd = params.FindOneInt("splitdepth",
-                               int(params.FindOneFloat("splitdepth", 1)));
+                               int(params.FindOneFloat("splitdepth", SUBDIV_LEVEL)));
 
     std::vector<std::shared_ptr<Shape>> curves;
     // Pointer to the first control point for the current segment. This is
