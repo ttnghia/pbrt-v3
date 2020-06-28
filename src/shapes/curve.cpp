@@ -43,9 +43,11 @@ STAT_COUNTER("Scene/Curves",       nCurves);
 STAT_COUNTER("Scene/Split curves", nSplitCurves);
 /****************************************************************************************************/
 
-#define QUADRATIC_CURVE_SPLIT
+#define PHANTOM_INTERSECTION
 
-#define SUBDIV_LEVEL 1
+//#define QUADRATIC_CURVE_SPLIT
+
+#define SUBDIV_LEVEL 0
 
 /****************************************************************************************************/
 // Curve Utility Functions
@@ -163,6 +165,14 @@ Bounds3f Curve::ObjectBound() const {
 }
 
 bool Curve::Intersect(const Ray& r, Float* tHit, SurfaceInteraction* isect, bool) const {
+#ifdef PHANTOM_INTERSECTION
+    return IntersectPhantom(r, tHit, isect);
+#else
+    return IntersectAABB(r, tHit, isect);
+#endif
+}
+
+bool Curve::IntersectAABB(const Ray& r, Float* tHit, SurfaceInteraction* isect) const {
     ProfilePhase p(isect ? Prof::CurveIntersect : Prof::CurveIntersectP);
     ++nTests;
     // Transform _Ray_ to object space
@@ -257,6 +267,173 @@ bool Curve::Intersect(const Ray& r, Float* tHit, SurfaceInteraction* isect, bool
     ReportValue(refinementLevel, maxDepth);
 
     return recursiveIntersect(ray, tHit, isect, cp, Inverse(objectToRay), uMin, uMax, maxDepth);
+}
+
+bool Curve::IntersectPhantom(const Ray& r, Float* tHit, SurfaceInteraction* isect) const {
+    ProfilePhase p(isect ? Prof::CurveIntersect : Prof::CurveIntersectP);
+    ++nTests;
+    // Transform _Ray_ to object space
+    Vector3f oErr, dErr;
+    Ray      ray = (*WorldToObject)(r, &oErr, &dErr);
+
+    // Compute object-space control points for curve segment, _cpObj_
+    Point3f cpObj[4];
+    cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
+    cpObj[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
+    cpObj[2] = BlossomBezier(common->cpObj, uMin, uMax, uMax);
+    cpObj[3] = BlossomBezier(common->cpObj, uMax, uMax, uMax);
+
+    // Project curve control points to plane perpendicular to ray
+
+    // Be careful to set the "up" direction passed to LookAt() to equal the
+    // vector from the first to the last control points.  In turn, this
+    // helps orient the curve to be roughly parallel to the x axis in the
+    // ray coordinate system.
+    //
+    // In turn (especially for curves that are approaching stright lines),
+    // we get curve bounds with minimal extent in y, which in turn lets us
+    // early out more quickly in recursiveIntersect().
+    Vector3f dx = Cross(ray.d, cpObj[3] - cpObj[0]);
+    if(dx.LengthSquared() == 0) {
+        // If the ray and the vector between the first and last control
+        // points are parallel, dx will be zero.  Generate an arbitrary xy
+        // orientation for the ray coordinate system so that intersection
+        // tests can proceeed in this unusual case.
+        Vector3f dy;
+        CoordinateSystem(ray.d, &dx, &dy);
+    }
+
+    Transform objectToRay = LookAt(ray.o, ray.o + ray.d, dx);
+    Point3f   cp[4]       = { objectToRay(cpObj[0]), objectToRay(cpObj[1]),
+                              objectToRay(cpObj[2]), objectToRay(cpObj[3]) };
+
+    // Before going any further, see if the ray's bounding box intersects
+    // the curve's bounding box. We start with the y dimension, since the y
+    // extent is generally the smallest (and is often tiny) due to our
+    // careful orientation of the ray coordinate ysstem above.
+    Float maxWidth = std::max(Lerp(uMin, common->width[0], common->width[1]),
+                              Lerp(uMax, common->width[0], common->width[1]));
+    if(std::max(std::max(cp[0].y, cp[1].y), std::max(cp[2].y, cp[3].y)) +
+       0.5f * maxWidth < 0 ||
+       std::min(std::min(cp[0].y, cp[1].y), std::min(cp[2].y, cp[3].y)) -
+       0.5f * maxWidth > 0) {
+        return false;
+    }
+
+    // Check for non-overlap in x.
+    if(std::max(std::max(cp[0].x, cp[1].x), std::max(cp[2].x, cp[3].x)) +
+       0.5f * maxWidth < 0 ||
+       std::min(std::min(cp[0].x, cp[1].x), std::min(cp[2].x, cp[3].x)) -
+       0.5f * maxWidth > 0) {
+        return false;
+    }
+
+    // Check for non-overlap in z.
+    Float rayLength = ray.d.Length();
+    Float zMax      = rayLength * ray.tMax;
+    if(std::max(std::max(cp[0].z, cp[1].z), std::max(cp[2].z, cp[3].z)) +
+       0.5f * maxWidth<0 ||
+                       std::min(std::min(cp[0].z, cp[1].z), std::min(cp[2].z, cp[3].z)) -
+                       0.5f * maxWidth> zMax) {
+        return false;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+
+    RayConeIntersection intersector;
+    float               t;
+    t = 0.0f;
+    intersector.c0 = Vector3f(cp[0]);
+
+    EvalBezier(cp, t, &intersector.cd);
+    intersector.dt = 1.0f;
+
+    int       count = 0;
+    bool      ok    = true;
+    const int iters = 10;
+
+    while(std::abs(intersector.dt) > 1e-5 && count++ < iters) {
+        if(!intersector.intersect(maxWidth, 0)) {
+            // return;
+            t = 1.0f;
+            intersector.c0 = Vector3f(cp[3]);
+            ok = false;
+            break;
+        }
+        t += intersector.dt;
+        intersector.c0 = Vector3f(EvalBezier(cp, t,  &intersector.cd));
+    }
+
+    if(!ok) {
+        intersector.dt = 1;
+        count          = 0;
+        while(std::abs(intersector.dt) > 1e-5 && count++ < iters) {
+            if(!intersector.intersect(maxWidth, 0)) {
+                return false;
+            }
+            t += intersector.dt;
+            intersector.c0 = Vector3f(EvalBezier(cp, t,  &intersector.cd));
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    Float           u0 = uMin, u1 = uMax;
+    const Transform rayToObject = Inverse(objectToRay);
+    {
+        // Intersect ray with curve segment
+
+        // Compute $u$ coordinate of curve intersection point and _hitWidth_
+        Float u        = Clamp(t, uMin, uMax);
+        Float hitWidth = Lerp(u, common->width[0], common->width[1]);
+
+        // Test intersection point against curve width
+        Vector3f dpcdw;
+        Point3f  pc = EvalBezier(cp, Clamp(u, 0, 1), &dpcdw);
+
+        Float ptCurveDist2 = pc.x * pc.x + pc.y * pc.y;
+        if(ptCurveDist2 > hitWidth * hitWidth * .25) { return false; }
+        Float zMax = rayLength * ray.tMax;
+        if(pc.z < 0 || pc.z > zMax) { return false; }
+
+        // Compute $v$ coordinate of curve intersection point
+        Float ptCurveDist = std::sqrt(ptCurveDist2);
+        Float edgeFunc    = dpcdw.x * -pc.y + pc.x * dpcdw.y;
+        Float v           = (edgeFunc > 0) ? 0.5f + ptCurveDist / hitWidth : 0.5f - ptCurveDist / hitWidth;
+
+        // Compute hit _t_ and partial derivatives for curve intersection
+        if(tHit != nullptr) {
+            // FIXME: this tHit isn't quite right for ribbons...
+
+            // Compute $\dpdu$ and $\dpdv$ for curve intersection
+            Vector3f dpdu, dpdv;
+            EvalBezier(common->cpObj, u, &dpdu);
+            CHECK_NE(Vector3f(0, 0, 0), dpdu) << "u = " << u << ", cp = " <<
+                common->cpObj[0] << ", " << common->cpObj[1] << ", " <<
+                common->cpObj[2] << ", " << common->cpObj[3];
+
+            // Compute curve $\dpdv$ for flat and cylinder curves
+            Vector3f dpduPlane = (Inverse(rayToObject))(dpdu);
+            Vector3f dpdvPlane = Normalize(Vector3f(-dpduPlane.y, dpduPlane.x, 0)) * hitWidth;
+
+            if(common->type == CurveType::Cylinder) {
+                // Rotate _dpdvPlane_ to give cylindrical appearance
+                Float     theta = Lerp(v, -90., 90.);
+                Transform rot   = Rotate(-theta, dpduPlane);
+                dpdvPlane = rot(dpdvPlane);
+            }
+            dpdv = rayToObject(dpdvPlane);
+
+            *tHit = intersector.s + intersector.c0.z;
+            // Compute error bounds for curve intersection
+            Vector3f pError = Vector3f(2 * hitWidth, 2 * hitWidth, 2 * hitWidth);
+
+            *isect = (*ObjectToWorld)(SurfaceInteraction(
+                                          ray(*tHit), pError, Point2f(u, v), -ray.d, dpdu, dpdv,
+                                          Normal3f(0, 0, 0), Normal3f(0, 0, 0), ray.time, this));
+        }
+        ++nHits;
+        return true;
+    }
 }
 
 bool Curve::recursiveIntersect(const Ray& ray, Float* tHit,
