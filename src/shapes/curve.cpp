@@ -45,7 +45,9 @@ STAT_COUNTER("Scene/Split curves", nSplitCurves);
 
 #define QUADRATIC_CURVE_SPLIT
 
-#define SUBDIV_LEVEL 1
+#define SUBDIV_LEVEL 0
+
+float Curve::rotationDeg = 0;
 
 /****************************************************************************************************/
 // Curve Utility Functions
@@ -104,7 +106,7 @@ CurveCommon::CurveCommon(const Point3f c[4], Float width0, Float width1, CurveTy
 
 std::vector<std::shared_ptr<Shape>> CreateCurve(
     const Transform* o2w, const Transform* w2o, bool reverseOrientation,
-    const Point3f* c, Float w0, Float w1, CurveType type,
+    const Point3f* co, Float w0, Float w1, CurveType type,
     const Normal3f* norm, int splitDepth) {
     const int                           nSegments = 1 << splitDepth;
     std::vector<std::shared_ptr<Shape>> segments;
@@ -120,6 +122,12 @@ std::vector<std::shared_ptr<Shape>> CreateCurve(
     }
     curveBytes += sizeof(CurveCommon) + nSegments * sizeof(Curve);
 #else
+
+    Transform R = RotateY(Curve::rotationDeg);
+    Point3f   c[4];
+    for(size_t i = 0; i < 4; ++i) {
+        c[i] = R(co[i]);
+    }
 
     Point3f qc1[3] = { c[0], c[0] + 1.5f * 0.5f * (c[1] - c[0]), c[0] };
     Point3f qc2[3] = { c[0], c[3] - 1.5f * 0.5f * (c[3] - c[2]), c[3] };

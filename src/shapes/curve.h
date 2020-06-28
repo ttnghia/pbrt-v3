@@ -61,6 +61,8 @@ struct CurveCommon {
 // Curve Declarations
 class Curve : public Shape {
 public:
+    static float rotationDeg;
+
     // Curve Public Methods
     Curve(const Transform* ObjectToWorld, const Transform* WorldToObject,
           bool reverseOrientation, const std::shared_ptr<CurveCommon>& common,
