@@ -142,7 +142,25 @@ int main(int argc, char* argv[]) {
             usage();
             return 0;
         } else if(!strncmp(argv[i], "--frame=", 8)) {
-            Curve::rotationDeg = atof(argv[i] + 8);
+            /* frame = [-90..90] => rotation = [-30..30] */
+            float rotation = atof(argv[i] + 8) / 3.0f;
+
+#define MAX_ROTATION 30.0f
+            if(rotation < -MAX_ROTATION) {
+                rotation = -MAX_ROTATION;
+            }
+            if(rotation > MAX_ROTATION) {
+                rotation = MAX_ROTATION;
+            }
+
+            float t        = (rotation + MAX_ROTATION) / (2.0f * MAX_ROTATION);
+            float mapped_t = (t < 0.5f) ?
+                             (4 * t * t * t) :
+                             1 - 4 * (1 - t) * (1 - t) * (1 - t);
+            rotation = mapped_t * (2.0f * MAX_ROTATION) - MAX_ROTATION;
+
+            Curve::rotationDeg = rotation;
+
             // std::cout << Curve::rotationDeg << std::endl;
         } else {
             filenames.push_back(argv[i]);
